@@ -1,4 +1,9 @@
 <?php
+// raspTeamCity
+// Monitor for TeamCity by raspBerry PI and two SSR to control two alarm signals
+// Author: Pau Ruiz - pau at fazerbcn dot net
+// Managed at: https://github.com/pauruiz/raspTeamCity
+
 class TeamCity{
 const ProjectStatusUnknown = 0;
 const ProjectStatusFailure = 1;
