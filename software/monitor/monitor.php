@@ -10,16 +10,12 @@ require('./TeamCity.php');
 $config = parse_ini_file('raspTeamCity.conf', false);
 print_r ($config);
 
-# We will download all projects information from TeamCity
-
+# Download all projects information from TeamCity
 echo 'Using TeamCity Url: ' . teamCityUrl($config) . PHP_EOL;
 $teamCityXML = file_get_contents(teamCityUrl($config));
 
 # We will convert the XML file to JSON
 $inputProjects = TeamCity::convertXMLProjectsToArray($teamCityXML);
-
-#echo 'Using config projects: ' . $config['projects'] . PHP_EOL;
-#print_r($config['projects']);
 
 #echo 'Input projects: ';
 #print_r($inputProjects);
@@ -41,7 +37,6 @@ if($monitoredProjects){
 		Alarm::deactivate(1); 
 	}
 	echo('Monitoring ' . count($monitoredProjects) . ' projects' . PHP_EOL);
-	#print_r($monitoredProjects);
 }else{
 	trigger_error('No monitored projects in this response from server', E_USER_WARNING);	
 }
@@ -51,7 +46,7 @@ if($monitoredProjects){
 // ----------------------------------------------------------------
 // ---- Config methods
 function teamCityUrl($config){
-	$url = $config['demo']?'teamcity-demo.xml':'http://' . $config['username'] . ':' . $config['password'] . '@' . $config['teamcityIP'] . ':' . $config['teamcityPort'] . '/httpAuth/app/rest/cctray/projects.xml';
+	@$url = $config['demo']?'teamcity-demo.xml':'http://' . $config['username'] . ':' . $config['password'] . '@' . $config['teamcityIP'] . ':' . $config['teamcityPort'] . '/httpAuth/app/rest/cctray/projects.xml';
 	return $url;
 }
 
@@ -59,16 +54,10 @@ function teamCityUrl($config){
 
 function filterMonitoredProjects($config, $projects){
 	$monitoredProjects = array();
-	#echo 'Projects to filter: ' . PHP_EOL;
-	#print_r($projects);
 	for($i=0;$i<count($projects);$i++){
 		$project = $projects[$i];
-		#echo 'Filtering project: ' . $project['name'] . PHP_EOL;
 		if(isProjectMonitored($config, $project) == TRUE){
-			#echo $project['name'] . ' is monitored ' . PHP_EOL;
 			$monitoredProjects[] = $project;
-		}else{
-			#echo $project['name'] . ' is not monitored' . PHP_EOL;
 		}
 	}
 	return $monitoredProjects;
@@ -76,20 +65,16 @@ function filterMonitoredProjects($config, $projects){
 
 function isProjectMonitored($config, $project){
 	$retVal = FALSE;
-	#echo 'Project to compare: ' . $project['name'] . $PHP_EOL;
-	#print_r($project);
 	for($i=0;$i<count($config['projects']);$i++){
-		#echo 'Comparing with config: ' . $config['projects'][$i] . PHP_EOL;
 		if(strcmp($project['name'], $config['projects'][$i]) == 0){
 			$retVal = TRUE;
-			break;
 		}
 	}
 	return $retVal;
 }
 
 function shouldAlarm($monitoredProjects){
-	return TeamCity::isBuildFailure($projects);
+	return TeamCity::isBuildFailure($monitoredProjects);
 }
 
 // -- Protection methods

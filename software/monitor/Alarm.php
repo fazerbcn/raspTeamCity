@@ -20,7 +20,7 @@ static public function activate($alarm_pos){
 static public function deactivate($alarm_pos){
 	$alarm_pos = floor($alarm_pos);
 	if(self::isValidAlarmPos($alarm_pos)){
-		exec('../gpio/gpio1' . (6+alarm_pos) . '.sh enable');
+		exec('../gpio/gpio1' . (6+$alarm_pos) . '.sh enable');
 		trigger_error('Alarma desactivada', E_USER_WARNING);
 	}else{
 		trigger_error('Invalid alarm in deactivate', E_USER_WARNING);

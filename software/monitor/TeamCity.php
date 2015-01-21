@@ -4,10 +4,10 @@
 // Author: Pau Ruiz - pau at fazerbcn dot net
 // Managed at: https://github.com/pauruiz/raspTeamCity
 
-class TeamCity{
 const ProjectStatusUnknown = 0;
 const ProjectStatusFailure = 1;
 const ProjectStatusSuccess = 2;
+class TeamCity{
 
 static public function convertXMLProjectsToArray($teamCityXML){
 	$xml = simplexml_load_string($teamCityXML);
@@ -45,11 +45,21 @@ static public function projectStatus($project){
 }
 
 static public function isBuildFailure($projects){
-	$retVal = NO;
+	$retVal = false;
 	for($i=0;$i<count($projects);$i++){
 		if(self::projectStatus($projects[$i]) == ProjectStatusFailure){
-			$retVal = YES;
+			$retVal = true;
 			break;
+		}
+	}
+	return $retVal;
+}
+
+static public function failuredBuilds($projects){
+	$retVal = array();
+	for($i=0;$i<count($projects);$i++){
+		if(self::projectStatus($projects[$i]) == ProjectStatusFailure){
+			$retVal[] = $projects[$i];
 		}
 	}
 	return $retVal;
