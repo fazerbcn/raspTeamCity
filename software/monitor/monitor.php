@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', '1');
+error_reporting(E_ALL);
+
 // raspTeamCity
 // Monitor for TeamCity by raspBerry PI and two SSR to control two alarm signals
 // Author: Pau Ruiz - pau at fazerbcn dot net
@@ -10,35 +13,63 @@ require('./TeamCity.php');
 $config = parse_ini_file('raspTeamCity.conf', false);
 print_r ($config);
 
-# Download all projects information from TeamCity
+# Download all builds information from TeamCity
 echo 'Using TeamCity Url: ' . teamCityUrl($config) . PHP_EOL;
-$teamCityXML = file_get_contents(teamCityUrl($config));
+#$teamCityXML = file_get_contents(teamCityUrl($config));
 
 # We will convert the XML file to JSON
-$inputProjects = TeamCity::convertXMLProjectsToArray($teamCityXML);
+#$currentBuilds = TeamCity::convertXMLBuildsToArray($teamCityXML);
+$currentBuilds = TeamCity::loadCurrentBuilds(teamCityUrl($config));
 
-#echo 'Input projects: ';
-#print_r($inputProjects);
+#echo 'Current builds: ';
+#print_r($currentBuilds);
 
-# Filtering the projects to monitor
-$monitoredProjects = filterMonitoredProjects($config, $inputProjects);
+# Filtering the builds to monitor for alarms
+$alarmMonitoredBuilds = filterBuildsByNameInArray($config['alarmBuilds'], $currentBuilds);
 
-#echo 'Monitored projects: ';
-#print_r($monitoredProjects);
-
-# We will check the state of the build server with the projects we are monitoring
-$buildFailure = TeamCity::isBuildFailure($monitoredProjects);
+#echo 'Alarm monitored Builds: ';
+#print_r($alarmMonitoredBuilds);
 
 # We will control the gpio according to the state of the project we are monitoring
-if($monitoredProjects){
-	if(shouldAlarm($monitoredProjects)){
+if($alarmMonitoredBuilds){
+	$lastAlarmBuilds = filterBuildsByNameInArray($config['alarmBuilds'], TeamCity::loadLastBuilds());
+	
+	if(shouldAlarm($alarmMonitoredBuilds, $lastAlarmBuilds, $config['alarmOnNextFailure'])){
 		Alarm::activate(1); 
 	}else{
 		Alarm::deactivate(1); 
 	}
-	echo('Monitoring ' . count($monitoredProjects) . ' projects' . PHP_EOL);
+	echo('Monitoring ' . count($alarmMonitoredBuilds) . ' projects' . PHP_EOL);
 }else{
-	trigger_error('No monitored projects in this response from server', E_USER_WARNING);	
+	trigger_error('No alarm monitored projects in this response from server', E_USER_WARNING);	
+}
+
+$mailMonitoredBuilds = filterBuildsByNameInArray($config['mailBuilds'], $currentBuilds);
+#echo 'Mail monitored Builds: ';
+#print_r($mailMonitoredBuilds);
+if($mailMonitoredBuilds){
+	$lastMailBuilds = filterBuildsByNameInArray($config['mailBuilds'], TeamCity::loadLastBuilds());
+	for($i=0;$i<count($mailMonitoredBuilds);$i++){
+		$build = $mailMonitoredBuilds[$i];
+		if(TeamCity::isBuildFailure($build)){
+			$lastBuild = searchBuildByName($lastMailBuilds, $build['name']);
+			if($lastBuild || !TeamCity::isSameRun($build, $lastBuild)){
+				// Mail = Yes
+				trigger_error('Sending mail for build ' . $build['name'] , E_USER_WARNING);	
+			}
+		}
+		
+	}
+	
+	echo('Monitoring for mail ' . count($mailMonitoredBuilds) . ' projects' . PHP_EOL);
+}else{
+	trigger_error('No mail monitored projects in this response from server', E_USER_WARNING);	
+}
+
+
+# We will store the current builds so we will be able to retrieve it later
+if (!$config['demo']){
+	TeamCity::saveLastBuilds($currentBuilds);
 }
 
 // ----------------------------------------------------------------
@@ -52,29 +83,66 @@ function teamCityUrl($config){
 
 // --- Project related methods
 
-function filterMonitoredProjects($config, $projects){
-	$monitoredProjects = array();
-	for($i=0;$i<count($projects);$i++){
-		$project = $projects[$i];
-		if(isProjectMonitored($config, $project) == TRUE){
-			$monitoredProjects[] = $project;
+function filterBuildsByNameInArray($filteredBuildNames, $builds){
+	$monitoredBuilds = array();
+	for($i=0;$i<count($builds);$i++){
+		$build = $builds[$i];
+		if(isBuildInFilter($filteredBuildNames, $build) == TRUE){
+			$monitoredBuilds[] = $build;
 		}
 	}
-	return $monitoredProjects;
+	return $monitoredBuilds;
 }
 
-function isProjectMonitored($config, $project){
-	$retVal = FALSE;
-	for($i=0;$i<count($config['projects']);$i++){
-		if(strcmp($project['name'], $config['projects'][$i]) == 0){
-			$retVal = TRUE;
+function searchBuildByName($builds, $searchName){
+	$retVal = false;
+	for($i=0;$i<count($builds);$i++){
+		if(strcmp($searchName, $builds[$i]['name']) == 0){
+			$retVal = $builds[$i];
+			break;
 		}
 	}
 	return $retVal;
 }
 
-function shouldAlarm($monitoredProjects){
-	return TeamCity::isBuildFailure($monitoredProjects);
+function isBuildInFilter($filteredBuildNames, $build){
+	$retVal = false;
+	for($i=0;$i<count($filteredBuildNames);$i++){
+		if(strcmp($build['name'], $filteredBuildNames[$i]) == 0){
+			$retVal = true;
+		}
+	}
+	return $retVal;
+}
+
+function shouldAlarm($alarmMonitoredBuilds, $lastBuilds, $shouldAlarmOnNextFailure = false){
+	$retVal = false;
+	for ($i=0;$i<count($alarmMonitoredBuilds);$i++){
+		$currentBuild = $alarmMonitoredBuilds[$i];
+		if (TeamCity::isBuildFailure($currentBuild)){
+			for($j=0;$j<count($lastBuilds);$j++){
+				$lastBuild = $lastBuilds[$j];
+				print_r($shouldAlarmOnNextFailure);
+				if(!$shouldAlarmOnNextFailure === true){
+				echo 'Tamos aqui!!!!!!' . PHP_EOL;
+					if(TeamCity::isSameBuild($currentBuild, $lastBuild)){
+						echo 'Tamos aqui2!!!!!!' . PHP_EOL;
+						if(!TeamCity::isSameRun($currentBuild, $lastBuild)){
+							echo 'Tamos aqui3!!!!!!' . PHP_EOL;
+							$retVal = true;
+						}else{
+							trigger_error('Nos libramos de la alarma porque ya hemos avisado en Build: ' . $currentBuild['name'], E_USER_WARNING);
+						}
+					}else{
+						$retVal = true;
+					}
+				}
+				break;
+			}
+		}
+	}
+	#return TeamCity::isBuildFailure($alarmMonitoredBuilds);
+	return $retVal;
 }
 
 // -- Protection methods

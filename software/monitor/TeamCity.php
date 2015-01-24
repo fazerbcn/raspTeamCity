@@ -8,8 +8,9 @@ const ProjectStatusUnknown = 0;
 const ProjectStatusFailure = 1;
 const ProjectStatusSuccess = 2;
 class TeamCity{
+static $lastBuildsFile = 'lastBuilds.json';
 
-static public function convertXMLProjectsToArray($teamCityXML){
+static public function convertXMLBuildsToArray($teamCityXML){
 	$xml = simplexml_load_string($teamCityXML);
 	$jsonProjects = json_encode($xml);
 	$arrayProjects = json_decode($jsonProjects, true);
@@ -22,6 +23,27 @@ static public function convertXMLProjectsToArray($teamCityXML){
 	#echo 'JSON:';
 	#print_r($jsonProjects);
 	return $arrayProjects;
+}
+
+static public function loadCurrentBuilds($url){
+	$teamCityXML = file_get_contents($url);
+	return self::convertXMLBuildsToArray($teamCityXML);
+	#return self::cleanProjectArray($teamCityXML);
+}
+
+static public function loadLastBuilds(){
+	if(file_exists(self::$lastBuildsFile)){
+		$teamCityJSON = file_get_contents(self::$lastBuildsFile);
+		$retVal = json_decode($teamCityJSON, true);
+	}else{
+		$retVal = array();
+	}
+	return $retVal;
+}
+
+static public function saveLastBuilds($teamCityBuilds){
+	$teamCityJSON = json_encode($teamCityBuilds);
+	file_put_contents(self::$lastBuildsFile, $teamCityJSON);
 }
 
 static public function projectStatus($project){
@@ -44,7 +66,32 @@ static public function projectStatus($project){
 	return $retVal;
 }
 
-static public function isBuildFailure($projects){
+static public function isBuildFailure($build){
+	$retVal = false;
+	if(self::projectStatus($build) == ProjectStatusFailure){
+		$retVal = true;
+	}
+	return $retVal;
+}
+
+static public function isSameBuild($build1, $build2){
+	$retVal = false;
+	if($build1['name'] == $build2['name']){
+		$retVal = true;
+	}
+	return $retVal;
+}
+
+static public function isSameRun($build1, $build2){
+	$retVal = false;
+	if($build1['lastBuildLabel'] == $build2['lastBuildLabel']){
+		$retVal = true;
+	}
+	return $retVal;
+}
+
+/// Deprecated, in favour of single test per build
+static public function isServerFailure($projects){
 	$retVal = false;
 	for($i=0;$i<count($projects);$i++){
 		if(self::projectStatus($projects[$i]) == ProjectStatusFailure){
