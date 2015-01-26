@@ -39,14 +39,14 @@ if($alarmMonitoredBuilds){
 	}else{
 		Alarm::deactivate(1); 
 	}
-	echo('Monitoring ' . count($alarmMonitoredBuilds) . ' projects' . PHP_EOL);
+	echo(count($alarmMonitoredBuilds) . ' alarm monitored projects' . PHP_EOL);
 }else{
 	trigger_error('No alarm monitored projects in this response from server', E_USER_WARNING);	
 }
 
 $mailMonitoredBuilds = filterBuildsByNameInArray($config['mailBuilds'], $currentBuilds);
-#echo 'Mail monitored Builds: ';
-#print_r($mailMonitoredBuilds);
+echo 'Mail monitored Builds: ';
+print_r($mailMonitoredBuilds);
 if($mailMonitoredBuilds){
 	$lastMailBuilds = filterBuildsByNameInArray($config['mailBuilds'], TeamCity::loadLastBuilds());
 	for($i=0;$i<count($mailMonitoredBuilds);$i++){
@@ -61,7 +61,7 @@ if($mailMonitoredBuilds){
 		
 	}
 	
-	echo('Monitoring for mail ' . count($mailMonitoredBuilds) . ' projects' . PHP_EOL);
+	echo(count($mailMonitoredBuilds) . ' mail monitored Builds' . PHP_EOL);
 }else{
 	trigger_error('No mail monitored projects in this response from server', E_USER_WARNING);	
 }
@@ -77,7 +77,7 @@ if (!$config['demo']){
 // ----------------------------------------------------------------
 // ---- Config methods
 function teamCityUrl($config){
-	@$url = $config['demo']?'teamcity-demo.xml':'http://' . $config['username'] . ':' . $config['password'] . '@' . $config['teamcityIP'] . ':' . $config['teamcityPort'] . '/httpAuth/app/rest/cctray/projects.xml';
+	@$url = ($config['demo']==true)?'teamcity-demo.xml':'http://' . $config['username'] . ':' . $config['password'] . '@' . $config['teamcityIP'] . ':' . $config['teamcityPort'] . '/httpAuth/app/rest/cctray/projects.xml';
 	return $url;
 }
 
