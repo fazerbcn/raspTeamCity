@@ -10,7 +10,7 @@ error_reporting(E_ALL);
 require('./Alarm.php');
 require('./TeamCity.php');
 
-$config = parse_ini_file('raspTeamCity.conf', false);
+$config = parse_ini_file('../../conf/raspTeamCity.conf', false);
 print_r ($config);
 
 # Download all builds information from TeamCity
