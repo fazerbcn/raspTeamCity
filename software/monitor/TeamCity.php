@@ -4,31 +4,16 @@
 // Author: Pau Ruiz - pau at fazerbcn dot net
 // Managed at: https://github.com/pauruiz/raspTeamCity
 
-const ProjectStatusUnknown = 0;
-const ProjectStatusFailure = 1;
-const ProjectStatusSuccess = 2;
+const BuildStatusUnknown = 0;
+const BuildStatusFailure = 1;
+const BuildStatusSuccess = 2;
 class TeamCity{
 static $lastBuildsFile = 'lastBuilds.json';
-
-static public function convertXMLBuildsToArray($teamCityXML){
-	$xml = simplexml_load_string($teamCityXML);
-	$jsonProjects = json_encode($xml);
-	$arrayProjects = json_decode($jsonProjects, true);
-	#echo "Projects array:\n";
-	#print_r($arrayProjects);
-	$arrayProjects = self::cleanProjectArray($arrayProjects);
-
-	#echo "xml:\n";
-	#print_r($xml);
-	#echo 'JSON:';
-	#print_r($jsonProjects);
-	return $arrayProjects;
-}
 
 static public function loadCurrentBuilds($url){
 	$teamCityXML = file_get_contents($url);
 	return self::convertXMLBuildsToArray($teamCityXML);
-	#return self::cleanProjectArray($teamCityXML);
+	#return self::cleanBuildsArray($teamCityXML);
 }
 
 static public function loadLastBuilds(){
@@ -46,21 +31,21 @@ static public function saveLastBuilds($teamCityBuilds){
 	file_put_contents(self::$lastBuildsFile, $teamCityJSON);
 }
 
-static public function projectStatus($project){
+static public function buildStatus($build){
 	$retVal = false;
-	$state = $project['lastBuildStatus'];
+	$state = $build['lastBuildStatus'];
 	switch($state){
 		case 'Success':
-			$retVal = ProjectStatusSuccess;
+			$retVal = BuildStatusSuccess;
 			break;
 		case 'Failure':
-			$retVal = ProjectStatusFailure;
-			trigger_error('Project ' . $project['name'] . ' failure', E_USER_WARNING);
+			$retVal = BuildStatusFailure;
+			trigger_error('Build ' . $build['name'] . ' failure', E_USER_WARNING);
 			break;
 		default:
 			trigger_error('Estado indeterminado: ' . $state, E_USER_WARNING);
 		case 'Unknown':
-			$retVal = ProjectStatusUnknown;
+			$retVal = BuildStatusUnknown;
 			break;
 	}
 	return $retVal;
@@ -68,7 +53,7 @@ static public function projectStatus($project){
 
 static public function isBuildFailure($build){
 	$retVal = false;
-	if(self::projectStatus($build) == ProjectStatusFailure){
+	if(self::buildStatus($build) == BuildStatusFailure){
 		$retVal = true;
 	}
 	return $retVal;
@@ -91,10 +76,10 @@ static public function isSameRun($build1, $build2){
 }
 
 /// Deprecated, in favour of single test per build
-static public function isServerFailure($projects){
+static public function isServerFailure($builds){
 	$retVal = false;
-	for($i=0;$i<count($projects);$i++){
-		if(self::projectStatus($projects[$i]) == ProjectStatusFailure){
+	for($i=0;$i<count($builds);$i++){
+		if(self::buildStatus($builds[$i]) == BuildStatusFailure){
 			$retVal = true;
 			break;
 		}
@@ -102,27 +87,42 @@ static public function isServerFailure($projects){
 	return $retVal;
 }
 
-static public function failuredBuilds($projects){
+static public function failuredBuilds($builds){
 	$retVal = array();
-	for($i=0;$i<count($projects);$i++){
-		if(self::projectStatus($projects[$i]) == ProjectStatusFailure){
-			$retVal[] = $projects[$i];
+	for($i=0;$i<count($builds);$i++){
+		if(self::buildStatus($builds[$i]) == BuildStatusFailure){
+			$retVal[] = $builds[$i];
 		}
 	}
 	return $retVal;
 }
 
 # // Private methods
-static private function cleanProjectArray($input){
+static private function cleanBuildsArray($input){
 	$retVal = array();
 	for($i=count($input['Project'])-1;$i>=0;$i--){
-		#echo 'Current clean project: ' . $i . PHP_EOL;
+		#echo 'Current clean build: ' . $i . PHP_EOL;
 		#print_r($input['Project'][$i]['@attributes']['name']);
 		$retVal[] = $input['Project'][$i]['@attributes'];
 	}
-	//echo 'Cleaned projects: ';
+	//echo 'Cleaned builds: ';
 	//print_r($retVal);
 	return $retVal;
+}
+
+static private function convertXMLBuildsToArray($teamCityXML){
+	$xml = simplexml_load_string($teamCityXML);
+	$jsonProjects = json_encode($xml);
+	$arrayProjects = json_decode($jsonProjects, true);
+	#echo "Projects array:\n";
+	#print_r($arrayProjects);
+	$arrayProjects = self::cleanBuildsArray($arrayProjects);
+
+	#echo "xml:\n";
+	#print_r($xml);
+	#echo 'JSON:';
+	#print_r($jsonProjects);
+	return $arrayProjects;
 }
 
 }
