@@ -1,0 +1,32 @@
+;Team City server IP address
+teamcityIP='1.1.1.1'
+; Team City server port
+teamcityPort='8111'
+
+alarmBuilds[]='Name :: of :: a :: Build'
+alarmBuilds[]='Name :: of :: another :: Build'
+; Indicate if we should alarm if
+alarmOnNextFailure=false;
+alarmOnSameRun=false;
+
+mailBuilds[]='Name :: of :: a :: Build'
+mailBuilds[]='Name :: of :: another :: Build'
+mailOnNextFailure=true;
+
+;andteamcityUrl='http://www.w3schools.com/xml/note.xml'
+username='monitor'
+password='monitor'
+demo=false
+
+; Mail configuration
+mailFrom='Name <mail@example.net>'
+mailSubject='Subject of the mail'
+mailTo[]='A person to send a mail <user@example.net>'
+mailTo[]='Another person to notify <another.user@example.net>'
+
+; By default there is two options, bleep_01.wav and police_s.wav, here can be any file added to the sounds directory
+;alarmSound = 'bleep_01.wav'
+alarmSound = 'police_s.wav'
+; 0 - Auto (default), 1 - Forced Analog, 2 - Forced HDMI
+soundOutput = 1
+
