@@ -18,8 +18,8 @@ print_r ($config);
 echo 'Using TeamCity Url: ' . teamCityUrl($config) . PHP_EOL;
 $currentBuilds = TeamCity::loadCurrentBuilds(teamCityUrl($config));
 
-echo 'Current builds: ';
-print_r($currentBuilds);
+#echo 'Current builds: ';
+#print_r($currentBuilds);
 
 # Filtering the builds to monitor for alarms
 $alarmMonitoredBuilds = filterBuildsByNameInArray($config['alarmBuilds'], $currentBuilds);
@@ -77,7 +77,7 @@ if (!$config['demo']){
 // ----------------------------------------------------------------
 // ---- Config methods
 function teamCityUrl($config){
-	@$url = ($config['demo']==true)?'teamcity-demo.xml':'http://' . $config['username'] . ':' . $config['password'] . '@' . $config['teamcityIP'] . ':' . $config['teamcityPort'] . '/httpAuth/app/rest/cctray/projects.xml';
+	@$url = ($config['demo']==true)?'teamcity-demo.xml':'http://' . $config['teamcityUsername'] . ':' . $config['teamcityPassword'] . '@' . $config['teamcityIP'] . ':' . $config['teamcityPort'] . '/httpAuth/app/rest/cctray/projects.xml';
 	return $url;
 }
 

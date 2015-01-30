@@ -1,3 +1,5 @@
+teamcityUsername='monitor'
+teamcityPassword='monitor'
 ;Team City server IP address
 teamcityIP='1.1.1.1'
 ; Team City server port
@@ -13,9 +15,6 @@ mailBuilds[]='Name :: of :: a :: Build'
 mailBuilds[]='Name :: of :: another :: Build'
 mailOnNextFailure=true;
 
-;andteamcityUrl='http://www.w3schools.com/xml/note.xml'
-username='monitor'
-password='monitor'
 demo=false
 
 ; Mail configuration
