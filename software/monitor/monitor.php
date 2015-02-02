@@ -7,25 +7,27 @@ error_reporting(E_ALL);
 // Author: Pau Ruiz - pau at fazerbcn dot net
 // Managed at: https://github.com/pauruiz/raspTeamCity
 
-require('./Alarm.php');
+require_once('./Alarm.php');
+#require_once('./RestTC.php');
 require('./TeamCity.php');
-require('./Sound.php');
+require_once('./Sound.php');
 
 $config = parse_ini_file('../../conf/raspTeamCity.conf', false);
-print_r ($config);
+#print_r ($config);
 
 # Download all builds information from TeamCity
-echo 'Using TeamCity Url: ' . teamCityUrl($config) . PHP_EOL;
-$currentBuilds = TeamCity::loadCurrentBuilds(teamCityUrl($config));
+#echo 'Using TeamCity Url: ' . teamCityUrl($config) . PHP_EOL;
+$currentBuilds = TeamCity::loadCurrentProjects($config['teamcityIP'], $config['teamcityPort'], $config['teamcityUsername'], $config['teamcityPassword'], $config['demo']);
 
-#echo 'Current builds: ';
-#print_r($currentBuilds);
+
+echo 'Current projects: ';
+print_r($currentBuilds);
 
 # Filtering the builds to monitor for alarms
 $alarmMonitoredBuilds = filterBuildsByNameInArray($config['alarmBuilds'], $currentBuilds);
 
-echo 'Alarm monitored Builds: ';
-print_r($alarmMonitoredBuilds);
+//echo 'Alarm monitored Builds: ';
+//print_r($alarmMonitoredBuilds);
 
 # We will control the gpio according to the state of the builds we are monitoring
 if($alarmMonitoredBuilds){
@@ -41,12 +43,12 @@ if($alarmMonitoredBuilds){
 	}
 	echo(count($alarmMonitoredBuilds) . ' alarm monitored builds' . PHP_EOL);
 }else{
-	trigger_error('No alarm monitored builds in this response from server', E_USER_WARNING);	
+	//trigger_error('No alarm monitored builds in this response from server', E_USER_WARNING);	
 }
 
 $mailMonitoredBuilds = filterBuildsByNameInArray($config['mailBuilds'], $currentBuilds);
-;echo 'Mail monitored Builds: ';
-;print_r($mailMonitoredBuilds);
+//echo 'Mail monitored Builds: ';
+//print_r($mailMonitoredBuilds);
 if($mailMonitoredBuilds){
 	$lastMailBuilds = filterBuildsByNameInArray($config['mailBuilds'], TeamCity::loadLastBuilds());
 	for($i=0;$i<count($mailMonitoredBuilds);$i++){
@@ -63,12 +65,12 @@ if($mailMonitoredBuilds){
 	
 	echo(count($mailMonitoredBuilds) . ' mail monitored Builds' . PHP_EOL);
 }else{
-	trigger_error('No mail monitored builds in this response from server', E_USER_WARNING);	
+	//trigger_error('No mail monitored builds in this response from server', E_USER_WARNING);	
 }
 
 
 # We will store the current builds so we will be able to retrieve it later
-if (!$config['demo']){
+if (!$config['demo'] && count($currentBuild)>0){
 	TeamCity::saveLastBuilds($currentBuilds);
 }
 

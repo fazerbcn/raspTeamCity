@@ -10,8 +10,9 @@ const BuildStatusSuccess = 2;
 class TeamCity{
 static $lastBuildsFile = 'lastBuilds.json';
 
-static public function loadCurrentBuilds($url){
-	$teamCityXML = file_get_contents($url);
+static public function loadCurrentProjects($ip, $port, $username, $password, $demo){
+	$url = self::teamCityProjectsUrl($ip, $port, $demo);
+	$teamCityXML = self::loadXML($url, $username, $password);
 	return self::convertXMLBuildsToArray($teamCityXML);
 	#return self::cleanBuildsArray($teamCityXML);
 }
@@ -100,22 +101,37 @@ static public function failuredBuilds($builds){
 # // Private methods
 static private function cleanBuildsArray($input){
 	$retVal = array();
-	for($i=count($input['Project'])-1;$i>=0;$i--){
-		#echo 'Current clean build: ' . $i . PHP_EOL;
-		#print_r($input['Project'][$i]['@attributes']['name']);
-		$retVal[] = $input['Project'][$i]['@attributes'];
+	$projects = $input['Project'];
+	print_r($projects);
+	// Protection against the fact we lose the mother array of builds because we only have one
+	if (count($projects) == 1 && is_array($projects['@attributes'])) {
+		$projects = array(0 => $projects);
 	}
-	//echo 'Cleaned builds: ';
-	//print_r($retVal);
+	for($i=count($projects)-1;$i>=0;$i--){
+		echo 'Current clean build: ' . $i . PHP_EOL;
+		print_r($projects[$i]['@attributes']['name']);
+		$retVal[] = $projects[$i]['@attributes'];
+	}
+	echo 'Cleaned builds: ';
+	print_r($retVal);
 	return $retVal;
 }
 
+static private function context($username, $password){
+	$context = stream_context_create(array(
+		'http' => array(
+			'header'  => "Authorization: Basic " . base64_encode($username . ':' . $password),
+			'timeout' => 60,
+		)
+	));
+	return $context;
+}
+
 static private function convertXMLBuildsToArray($teamCityXML){
-	$xml = simplexml_load_string($teamCityXML);
-	$jsonProjects = json_encode($xml);
+	$jsonProjects = json_encode($teamCityXML);
 	$arrayProjects = json_decode($jsonProjects, true);
-	#echo "Projects array:\n";
-	#print_r($arrayProjects);
+	echo "Projects array:\n";
+	print_r($arrayProjects);
 	$arrayProjects = self::cleanBuildsArray($arrayProjects);
 
 	#echo "xml:\n";
@@ -123,6 +139,17 @@ static private function convertXMLBuildsToArray($teamCityXML){
 	#echo 'JSON:';
 	#print_r($jsonProjects);
 	return $arrayProjects;
+}
+
+static private function loadXML($url, $username, $password){
+	$context = self::context($username, $password);
+	$xml = simplexml_load_string(file_get_contents($url, false, $context));
+	return $xml;
+}
+
+static private function teamCityProjectsUrl($ip, $port, $demo){
+	@$url = ($demo==true)?'teamcity-demo.xml':'http://' . $ip . ':' . $port . '/httpAuth/app/rest/cctray/projects.xml';
+	return $url;
 }
 
 }
