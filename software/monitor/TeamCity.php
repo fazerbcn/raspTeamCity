@@ -143,7 +143,7 @@ static private function convertXMLBuildsToArray($teamCityXML){
 
 static private function loadXML($url, $username, $password){
 	$context = self::context($username, $password);
-	$xml = simplexml_load_string(file_get_contents($url, false, $context));
+	$xml = simplexml_load_string(file_get_contents($url, false, $context)); 
 	return $xml;
 }
 
