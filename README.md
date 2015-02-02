@@ -46,6 +46,7 @@ Configuration file
 ------------------
 
 Name | Type | Description
+---- | ---- | -----------
 teamcityIP | IP String | IP Address of the Team City Server
 teamcityPort | Number | TCP Number of the Team City Server
 teamcityUsername | String | Username to validate on the Team City Server
