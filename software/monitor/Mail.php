@@ -23,15 +23,17 @@ static public function sendMailForBuild($build, $config){
 	mail($to, $subject, $message, $additional_headers, $additional_parameters);º
 }
 
-static private function artifactURLForBuild($build){
-	$xml = simplexml_load_string($teamCityXML);
-	$jsonProjects = json_encode($xml);
-	$arrayProjects = json_decode($jsonProjects, true);
-	#echo "Projects array:\n";
-	#print_r($arrayProjects);
-	$arrayProjects = self::cleanProjectArray($arrayProjects);
-
-	#echo "xml:\n";
+static private function getAttachmentsForBuild($build){
+	$attachments = array();
+	foreach($build['artifacts'] as $artifacturl){
+		$attachment = array();
+		$attachment['name'] = basename($artifacturl);
+		$attachment['content'] = file_get_contents($artifacturl);
+		if($attachment['content'] != ''){
+			$attachments[] = $attachment;
+		}
+	}
+	return $attachments
 }
 
 }
