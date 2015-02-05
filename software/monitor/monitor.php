@@ -8,28 +8,28 @@ error_reporting(E_ALL);
 // Managed at: https://github.com/pauruiz/raspTeamCity
 
 require_once('./Alarm.php');
-#require_once('./RestTC.php');
-require('./TeamCity.php');
+require_once('./RestTC.php');
+//require('./TeamCity.php');
 require_once('./Sound.php');
 
 $config = parse_ini_file('../../conf/raspTeamCity.conf', false);
-#print_r ($config);
+//print_r ($config);
 
-# Download all builds information from TeamCity
-#echo 'Using TeamCity Url: ' . teamCityUrl($config) . PHP_EOL;
+// Download all builds information from TeamCity
+//echo 'Using TeamCity Url: ' . teamCityUrl($config) . PHP_EOL;
 $currentBuilds = TeamCity::loadCurrentProjects($config['teamcityIP'], $config['teamcityPort'], $config['teamcityUsername'], $config['teamcityPassword'], $config['demo']);
 
 
 echo 'Current projects: ';
 print_r($currentBuilds);
 
-# Filtering the builds to monitor for alarms
+// Filtering the builds to monitor for alarms
 $alarmMonitoredBuilds = filterBuildsByNameInArray($config['alarmBuilds'], $currentBuilds);
 
 //echo 'Alarm monitored Builds: ';
 //print_r($alarmMonitoredBuilds);
 
-# We will control the gpio according to the state of the builds we are monitoring
+// We will control the gpio according to the state of the builds we are monitoring
 if($alarmMonitoredBuilds){
 	$lastAlarmBuilds = filterBuildsByNameInArray($config['alarmBuilds'], TeamCity::loadLastBuilds());
 	
@@ -69,8 +69,8 @@ if($mailMonitoredBuilds){
 }
 
 
-# We will store the current builds so we will be able to retrieve it later
-if (!$config['demo'] && count($currentBuild)>0){
+// We will store the current builds so we will be able to retrieve it later
+if (!$config['demo'] && count($currentBuilds)>0){
 	TeamCity::saveLastBuilds($currentBuilds);
 }
 
@@ -143,7 +143,7 @@ function shouldAlarm($alarmMonitoredBuilds, $lastBuilds, $shouldAlarmOnNextFailu
 			}
 		}
 	}
-	#return TeamCity::isBuildFailure($alarmMonitoredBuilds);
+	//return TeamCity::isBuildFailure($alarmMonitoredBuilds);
 	return $retVal;
 }
 

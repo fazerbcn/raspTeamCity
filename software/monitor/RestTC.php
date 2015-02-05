@@ -19,20 +19,18 @@ static public function loadCurrentProjects($ip, $port, $username, $password, $de
 		$project = $teamCityObjects[$i];
 		$teamCityXML = self::loadXML(self::teamCityProjectBuildTypesUrl($ip, $port, $project['id'], $demo), $username, $password);
 		foreach($teamCityXML->children() as $bt){
-			//echo 'Build del project ' . $project['name'] . ': ' . $teamCityXML . PHP_EOL;
-			//print_r($teamCityXML);
 			$buildTypeId = (string)$bt['id'];
 			$teamCityXML = self::loadXML(self::teamCityProjectBuildUrl($ip, $port, $buildTypeId, $demo), $username, $password);
 			//$build = $teamCityXML->children()[0];
 			$build = self::convertXMLToArray($teamCityXML);
 			$buildId = $build['@attributes']['id'];
-			echo 'The build is: ' . $build . PHP_EOL;
-			print_r($build);
-			//$status = (string)$build['status'];
+			//echo 'The build is: ' . $build . PHP_EOL;
+			//print_r($build);
 			$status = $build['@attributes']['status'];
-			$artifacts = $build['artifacts'];
+			$artifactsurl = $build['artifacts']['@attributes']['href'];
+			$artifacts = (strlen($artifactsurl)>0)?self::getBuildArtifactPaths(self::teamCityServerURL($ip, $port) . $artifactsurl, $username, $password):array();
       			$status = ($status == '')?'UNKNOWN2':$status;
-			$teamCityObjects[$i]['lastBuild'] = array('buildTypeId' => $buildTypeId, 'id' => $buildId, 'name' => (string)$bt['name'], 'number' =>$build['@attributes']['number'],'status' => $status, 'artifacts' => self::convertXMLToArray($build['artifacts']));
+			$teamCityObjects[$i]['lastBuild'] = array('buildTypeId' => $buildTypeId, 'id' => $buildId, 'name' => (string)$bt['name'], 'number' =>$build['@attributes']['number'],'status' => $status, 'artifacts' => $artifacts, 'artifactsurl' => $artifactsurl);
 		}
 	}
 	return $teamCityObjects;
@@ -107,13 +105,13 @@ static public function failuredBuilds($builds){
 	return $retVal;
 }
 
-# // Private methods
+// Private methods
 static private function cleanProjectsArrayOriginal($input){
 	$retVal = array();
 	//print_r($input);
 	for($i=count($input['project'])-1;$i>=0;$i--){
-		#echo 'Current clean build: ' . $i . PHP_EOL;
-		#print_r($input['project'][$i]['@attributes']['name']);
+		//echo 'Current clean build: ' . $i . PHP_EOL;
+		//print_r($input['project'][$i]['@attributes']['name']);
 		$retVal[] = $input['project'][$i]['@attributes'];
 	}
 	//echo 'Cleaned builds: ';
@@ -123,11 +121,11 @@ static private function cleanProjectsArrayOriginal($input){
 
 static private function cleanTeamCityArrayResponse($input){
 	$retVal = array();
-	#print_r($input);
+	//print_r($input);
 	$elements = array_pop($input);
 	for($i=count($elements)-1;$i>=0;$i--){
-		#echo 'Current clean build: ' . $i . PHP_EOL;
-		#print_r($elements[$i]['@attributes']['name']);
+		//echo 'Current clean build: ' . $i . PHP_EOL;
+		//print_r($elements[$i]['@attributes']['name']);
 		$retVal[] = $elements[$i]['@attributes'];
 	}
 	//echo 'Cleaned builds: ';
@@ -148,14 +146,26 @@ static private function context($username, $password){
 static private function convertXMLToArray($teamCityXML){
 	$jsonProjects = json_encode($teamCityXML);
 	$arrayProjects = json_decode($jsonProjects, true);
-	#echo "Projects array:\n";
-	#print_r($arrayProjects);
+	//echo "Projects array:\n";
+	//print_r($arrayProjects);
 
-	#echo "xml:\n";
-	#print_r($xml);
-	#echo 'JSON:';
-	#print_r($jsonProjects);
+	//echo "xml:\n";
+	//print_r($xml);
+	//echo 'JSON:';
+	//print_r($jsonProjects);
 	return $arrayProjects;
+}
+
+static private function loadBuildArtifactPaths($artifactsurl, $username, $password){
+	$artifacts = array();
+	$artifactsURLXML = self::loadXML($artifactsurl, $username, $password);
+	$artifactsURLArray = self::convertXMLToArray($artifactsURLXML);
+	foreach($artifactsURLArray as $artifact){
+		echo 'Adding one element' . PHP_EOL;
+		print_r($artifact);
+		$artifacts[] = $artifact['content']['@attributes']['href'];
+	}
+	return $artifacts;
 }
 
 static private function loadCurrentProjectBuilds($ip, $port, $username, $password, $projectId, $demo){
@@ -172,27 +182,32 @@ static private function loadCurrentProjectBuilds($ip, $port, $username, $passwor
 
 static private function loadXML($url, $username, $password){
 	$context = self::context($username, $password);
-	return simplexml_load_string(file_get_contents($url, false, $context));
+	$fileContents = file_get_contents($url, false, $context);
+	return ($fileContents!='')?simplexml_load_string($fileContents):false;
 }
 
 static private function teamCityProjectsUrl($ip, $port, $username, $password, $demo){
-	@$url = ($config['demo']==true)?'teamcity-projects-demo.xml':'http://' . $username . ':' . $password . '@' . $ip . ':' . $port . '/httpAuth/app/rest/projects';
+	@$url = ($config['demo']==true)?'teamcity-projects-demo.xml':self::teamCityServerURL($ip, $port) . '/httpAuth/app/rest/projects';
 	return $url;
 }
 
 static private function teamCityProjectBuildsUrl($ip, $port, $projectId, $demo){
-	@$url = ($config['demo']==true)?'teamcity-builds-demo.xml':'http://' . $ip . ':' . $port . '/httpAuth/app/rest/builds/running:false,count:1,project:' . $projectId;
+	@$url = ($config['demo']==true)?'teamcity-builds-demo.xml':self::teamCityServerURL($ip, $port) . '/httpAuth/app/rest/builds/running:false,count:1,project:' . urlencode($projectId);
 	return $url;
 }
 
 static private function teamCityProjectBuildUrl($ip, $port, $buildTypeId, $demo){
-	@$url = ($config['demo']==true)?'teamcity-builds-demo.xml':'http://' . $ip . ':' . $port . '/httpAuth/app/rest/builds/running:false,count:1,buildType:' . $buildTypeId;
+	@$url = ($config['demo']==true)?'teamcity-builds-demo.xml':self::teamCityServerURL($ip, $port) . '/httpAuth/app/rest/builds/running:false,count:1,buildType:' . urlencode($buildTypeId);
 	return $url;
 }
 
 static private function teamCityProjectBuildTypesUrl($ip, $port, $projectId, $demo){
-	@$url = ($config['demo']==true)?'teamcity-builds-demo.xml':'http://' . $ip . ':' . $port . '/httpAuth/app/rest/projects/' . $projectId . '/buildTypes';
+	@$url = ($config['demo']==true)?'teamcity-builds-demo.xml':self::teamCityServerURL($ip, $port) . '/httpAuth/app/rest/projects/' . urlencode($projectId) . '/buildTypes';
 	return $url;
+}
+
+static private function teamCityServerURL($ip, $port){
+	return 'http://' . $ip . ':' . $port;
 }
 
 }
