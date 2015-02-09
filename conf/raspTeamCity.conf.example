@@ -13,9 +13,10 @@ alarmOnSameRun=false;
 
 mailBuilds[]='Name :: of :: a :: Build'
 mailBuilds[]='Name :: of :: another :: Build'
-mailOnNextFailure=true;
+mailOnNextRun=true;
 
 demo=false
+debug=true
 
 ; Mail configuration
 mailFrom='Name <mail@example.net>'

@@ -57,8 +57,11 @@ if($mailMonitoredBuilds){
 		if(TeamCity::isBuildFailure($build)){
 			$lastBuild = searchBuildByName($lastMailBuilds, $build['name']);
 			if($lastBuild || !TeamCity::isSameRun($build, $lastBuild)){
-				// Mail = Yes
-				trigger_error('Sending mail for build ' . $build['name'] , E_USER_WARNING);	
+				$lastBuildFailure = TeamCity::isBuildFailure($lastBuild);
+				if(!lastBuildFailure || $config['mailOnNextRun']){
+					// Mail = Yes
+					trigger_error('Sending mail for build ' . $build['name'] , E_USER_WARNING);
+				}
 			}
 		}
 		
