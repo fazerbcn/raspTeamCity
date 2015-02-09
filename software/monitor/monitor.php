@@ -13,38 +13,39 @@ require_once('./RestTC.php');
 require_once('./Sound.php');
 
 $config = parse_ini_file('../../conf/raspTeamCity.conf', false);
+$debug = $config['debug'];
 //print_r ($config);
 
 // Download all builds information from TeamCity
 //echo 'Using TeamCity Url: ' . teamCityUrl($config) . PHP_EOL;
 $currentBuilds = TeamCity::loadCurrentProjects($config['teamcityIP'], $config['teamcityPort'], $config['teamcityUsername'], $config['teamcityPassword'], $config['demo']);
 
-
-echo 'Current projects: ';
-print_r($currentBuilds);
+//echo 'Current projects: ';
+//print_r($currentBuilds);
 
 // Filtering the builds to monitor for alarms
 $alarmMonitoredBuilds = filterBuildsByNameInArray($config['alarmBuilds'], $currentBuilds);
 
-//echo 'Alarm monitored Builds: ';
-//print_r($alarmMonitoredBuilds);
+echo 'Alarm monitored Builds: ';
+print_r($alarmMonitoredBuilds);
 
 // We will control the gpio according to the state of the builds we are monitoring
 if($alarmMonitoredBuilds){
 	$lastAlarmBuilds = filterBuildsByNameInArray($config['alarmBuilds'], TeamCity::loadLastBuilds());
-	
-	if(shouldAlarm($alarmMonitoredBuilds, $lastAlarmBuilds, $config['alarmOnNextFailure'])){
+	$shouldAlarm = shouldAlarm($alarmMonitoredBuilds, $lastAlarmBuilds, $config['alarmOnNextRun']);
+	//if((($shouldAlarm >= Alarm::Same) && ($config['alarmOnSameRun'] == true)) || (($shouldAlarm >= Alarm::Next) && (config['alarmOnNextRun'] == true)) || ($shouldAlarm == Alarm::On)){
+	if((($shouldAlarm >= Alarm::Same) && ($config['alarmOnSameRun'] == true))){
 		Alarm::activate(1); 
-		if($config['alarmSound']!=false){
+		if(($shouldAlarm == Alarm::On) && $config['alarmSound']===true){
 			Sound::playSound('../../sounds/' . $config['alarmSound']);
 		}
 	}else{
 		Alarm::deactivate(1); 
 	}
-	echo(count($alarmMonitoredBuilds) . ' alarm monitored builds' . PHP_EOL);
 }else{
 	//trigger_error('No alarm monitored builds in this response from server', E_USER_WARNING);	
 }
+echo(count($alarmMonitoredBuilds) . ' alarm monitored builds' . PHP_EOL);
 
 $mailMonitoredBuilds = filterBuildsByNameInArray($config['mailBuilds'], $currentBuilds);
 //echo 'Mail monitored Builds: ';
@@ -63,10 +64,10 @@ if($mailMonitoredBuilds){
 		
 	}
 	
-	echo(count($mailMonitoredBuilds) . ' mail monitored Builds' . PHP_EOL);
 }else{
 	//trigger_error('No mail monitored builds in this response from server', E_USER_WARNING);	
 }
+echo(count($mailMonitoredBuilds) . ' mail monitored Builds' . PHP_EOL);
 
 
 // We will store the current builds so we will be able to retrieve it later
@@ -117,28 +118,29 @@ function isBuildInFilter($filteredBuildNames, $build){
 	return $retVal;
 }
 
-function shouldAlarm($alarmMonitoredBuilds, $lastBuilds, $shouldAlarmOnNextFailure = false){
-	$retVal = false;
+// Working Here
+function shouldAlarm($alarmMonitoredBuilds, $lastBuilds){
+	$retVal = Alarm::On;
 	for ($i=0;$i<count($alarmMonitoredBuilds);$i++){
 		$currentBuild = $alarmMonitoredBuilds[$i];
 		if (TeamCity::isBuildFailure($currentBuild)){
-			for($j=0;$j<count($lastBuilds);$j++){
-				$lastBuild = $lastBuilds[$j];
-				print_r($shouldAlarmOnNextFailure);
-				if(!$shouldAlarmOnNextFailure === true){
-				echo 'Tamos aqui!!!!!!' . PHP_EOL;
-					if(TeamCity::isSameBuild($currentBuild, $lastBuild)){
-						echo 'Tamos aqui2!!!!!!' . PHP_EOL;
-						if(!TeamCity::isSameRun($currentBuild, $lastBuild)){
-							echo 'Tamos aqui3!!!!!!' . PHP_EOL;
-							$retVal = true;
-						}else{
-							trigger_error('Nos libramos de la alarma porque ya hemos avisado en Build: ' . $currentBuild['name'], E_USER_WARNING);
-						}
-					}else{
-						$retVal = true;
-					}
+			$lastBuild = searchBuildByName($currentBuild['name']);
+			if($lastBuild){
+				if(TeamCity::isBuildFailure($lastBuild) && TeamCity::isSameRun($currentBuild, $lastBuild)){
+					$retVal = ($retVal > Alarm::Same) ? $retVal : Alarm::Same;
+					echo 'Should Alarm based on same run onBuild: ' . $curentBuild['name'] . PHP_EOL;
+				}else if(TeamCity::isBuildFailure($lastBuild)){
+					$retVal = ($retVal > Alarm::Next) ? $retVal : Alarm::Next;
+					echo 'Should alarm based on next run on Build: ' . $currentBuild['name'] . PHP_EOL;
+					$retVal = Alarm::Next;
+				}else{
+					//trigger_error('Should alarm after off on Build: ' . $currentBuild['name'], E_USER_WARNING);
+					$retVal = Alarm::On;
+					break;
 				}
+			}else{
+				//trigger_error('Should alarm after unknown state on Build: ' . $currentBuild[''], E_USER_WARNING);
+				$retVal = Alarm::On;
 				break;
 			}
 		}

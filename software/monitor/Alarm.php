@@ -6,6 +6,12 @@
 
 class Alarm{
 
+const Off  = 0;
+const Same = 2;
+const Next = 4;
+const On   = 8;
+
+
 static public function activate($alarm_pos){
 	$alarm_pos = floor($alarm_pos);
 	#echo 'Cambiado alarm pos ' . $alarm_pos . PHP_EOL;

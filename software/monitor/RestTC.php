@@ -28,7 +28,7 @@ static public function loadCurrentProjects($ip, $port, $username, $password, $de
 			//print_r($build);
 			$status = $build['@attributes']['status'];
 			$artifactsurl = $build['artifacts']['@attributes']['href'];
-			$artifacts = (strlen($artifactsurl)>0)?self::getBuildArtifactPaths(self::teamCityServerURL($ip, $port) . $artifactsurl, $username, $password):array();
+			$artifacts = (strlen($artifactsurl)>0)?self::loadBuildArtifactPaths(self::teamCityServerURL($ip, $port) . $artifactsurl, $username, $password):array();
       			$status = ($status == '')?'UNKNOWN2':$status;
 			$teamCityObjects[$i]['lastBuild'] = array('buildTypeId' => $buildTypeId, 'id' => $buildId, 'name' => (string)$bt['name'], 'number' =>$build['@attributes']['number'],'status' => $status, 'artifacts' => $artifacts, 'artifactsurl' => $artifactsurl);
 		}
@@ -53,18 +53,18 @@ static public function saveLastBuilds($teamCityBuilds){
 
 static public function buildStatus($build){
 	$retVal = false;
-	$state = $build['lastBuildStatus'];
+	$state = $build['lastBuild']['status'];
 	switch($state){
-		case 'Success':
+		case 'SUCCESS':
 			$retVal = BuildStatusSuccess;
 			break;
-		case 'Failure':
+		case 'FAILURE':
 			$retVal = BuildStatusFailure;
 			trigger_error('Build ' . $build['name'] . ' failure', E_USER_WARNING);
 			break;
 		default:
 			trigger_error('Estado indeterminado: ' . $state, E_USER_WARNING);
-		case 'Unknown':
+		case 'UNKNOWN':
 			$retVal = BuildStatusUnknown;
 			break;
 	}
