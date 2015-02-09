@@ -8,7 +8,7 @@ teamcityPort='8111'
 alarmBuilds[]='Name :: of :: a :: Build'
 alarmBuilds[]='Name :: of :: another :: Build'
 ; Indicate if we should alarm if
-alarmOnNextFailure=false;
+alarmOnNextRun=true;
 alarmOnSameRun=false;
 
 mailBuilds[]='Name :: of :: a :: Build'
